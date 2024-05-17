@@ -50,7 +50,7 @@ class DATA_LOADER():
             elements=row.split(' ')                           #slicing the row to individual numbers
             elements=np.array(list(filter(lambda a: a != '', elements)), dtype='float64')            #dropping '' strings remaining from slicing
 
-            output_nparray[c, :] = elements / 10**17
+            output_nparray[c, :] = elements / 10**19
             
         return output_nparray.flatten()
 
@@ -89,24 +89,18 @@ class DATA_LOADER():
         Output = self.get_shapes_from_df(df, "Density Shape[$1/m^3$]")
         Input  = self.get_shapes_from_df(df, "Emission 2p-->2s")
         
+        
         # Splitting the data into Training, Testing and Validation Sets
         InputTrain, InputTest, OutputTrain, OutputTest = train_test_split(Input, Output, test_size=self.testDataFrac, random_state=self.random_seed)
         InputTrain, InputVal, OutputTrain, OutputVal = train_test_split(InputTrain, OutputTrain, test_size=self.valDataFrac, random_state=self.random_seed)
 
-        # Logging the data
-        mlflow.log_input(mlflow.data.from_numpy(InputTrain), context = 'Training')
-        mlflow.log_input(mlflow.data.from_numpy(OutputTrain), context = 'Training')
-        mlflow.log_input(mlflow.data.from_numpy(InputTest), context = 'Testing')
-        mlflow.log_input(mlflow.data.from_numpy(OutputTest), context = 'Testing')
-        mlflow.log_input(mlflow.data.from_numpy(InputVal), context = 'Validation')
-        mlflow.log_input(mlflow.data.from_numpy(OutputVal), context = 'Validation')
+        data     = [InputTrain, InputTest, OutputTrain, OutputTest, InputTrain, InputVal, OutputTrain, OutputVal] 
+        dataname = ["InputTrain", "InputTest", "OutputTrain", "OutputTest", "InputTrain", "InputVal", "OutputTrain", "OutputVal"]
         
-        # Converting to tensorflow
-        InputTrain  = tf.convert_to_tensor(InputTrain, dtype=tf.float32)  
-        OutputTrain = tf.convert_to_tensor(OutputTrain, dtype=tf.float32)  
-        InputTest   = tf.convert_to_tensor(InputTest, dtype=tf.float32)  
-        OutputTest  = tf.convert_to_tensor(OutputTest, dtype=tf.float32) 
-        InputVal    = tf.convert_to_tensor(InputVal, dtype=tf.float32)  
-        OutputVal   = tf.convert_to_tensor(OutputVal, dtype=tf.float32)   
+        # Logging the data and converting it to tensors
+        for i in range(len(data)):
+            mlflow.log_input(mlflow.data.from_numpy(data[i]), context = dataname[i])
+            data[i]  = tf.convert_to_tensor(data[i], dtype=tf.float32)  
+
   
-        return [InputTrain, InputTest, OutputTrain, OutputTest, InputTrain, InputVal, OutputTrain, OutputVal] 
+        return data
