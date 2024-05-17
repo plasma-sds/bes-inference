@@ -5,23 +5,20 @@ import tensorflow as tf
 from sklearn.model_selection import train_test_split
 import logging
 import mlflow
+from density.inputDict import inputDictionary
 
-
-class DATA_LOADER():
+class DATA_LOADER(inputDictionary):
     
     
-    def __init__(self, **kwargs):
+    def __init__(self):
         
-        for key, value in kwargs.items():
-            setattr(self, key, value)
-            
+        super().__init__()
+        
+  
         random.seed(self.random_seed)
         
         self.sensorWeights = np.ones(self.numPoints, dtype='float64')
         
-        # Creating a Logger
-        logging.basicConfig(filename=self.logDir + '/log.txt', level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-
 
         
         return 
@@ -94,13 +91,14 @@ class DATA_LOADER():
         InputTrain, InputTest, OutputTrain, OutputTest = train_test_split(Input, Output, test_size=self.testDataFrac, random_state=self.random_seed)
         InputTrain, InputVal, OutputTrain, OutputVal = train_test_split(InputTrain, OutputTrain, test_size=self.valDataFrac, random_state=self.random_seed)
 
-        data     = [InputTrain, InputTest, OutputTrain, OutputTest, InputTrain, InputVal, OutputTrain, OutputVal] 
-        dataname = ["InputTrain", "InputTest", "OutputTrain", "OutputTest", "InputTrain", "InputVal", "OutputTrain", "OutputVal"]
+        data     = [InputTrain, InputTest, InputVal, OutputTrain, OutputTest, OutputVal] 
+        dataname = ["InputTrain", "InputTest", "InputVal", "OutputTrain", "OutputTest", "OutputVal"]
         
         # Logging the data and converting it to tensors
+        tf_data = []
         for i in range(len(data)):
             mlflow.log_input(mlflow.data.from_numpy(data[i]), context = dataname[i])
-            data[i]  = tf.convert_to_tensor(data[i], dtype=tf.float32)  
+            tf_data.append(tf.convert_to_tensor(data[i], dtype=tf.float32))
 
   
-        return data
+        return tf_data

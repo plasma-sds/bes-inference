@@ -10,6 +10,7 @@ parent_dir = os.path.dirname(current_dir)
 sys.path.append(parent_dir)
 
 from network.pinn import TRAINER
+from density.inputDict import inputDictionary
 import tensorflow as tf
 import mlflow
 import logging
@@ -48,30 +49,28 @@ if __name__ == '__main__':
         exit()
         
         
-    # Loading in the Input Dictionary
-    with open('inputDictionary.json') as config:
-        inputDictionary = json.load(config)
-
+    # Loading in the Input Dictionary Class
+    iD = inputDictionary()
 
     # Initialzing the Mlflow run
-    mlflow.set_tracking_uri(inputDictionary['tracking_uri'])
-    mlflow.set_experiment(inputDictionary['experiment_name'])
+    mlflow.set_tracking_uri(iD.tracking_uri)
+    mlflow.set_experiment(iD.experiment_name)
     
     # getting the current time to use as a run ID
     (dt, micro) = datetime.now().strftime('%Y%m%d-%H%M%S-.%f').split('.')
-    inputDictionary['timestr'] = "%s%03d" % (dt, int(micro) / 1000)
+    iD.timestr = "%s%03d" % (dt, int(micro) / 1000)
     
-    os.environ['MLFLOW_ENABLE_SYSTEM_METRICS_LOGGING'] = inputDictionary['track_system_metrics']
-    logging.info('MLFLOW_ENABLE_SYSTEM_METRICS_LOGGING =' + inputDictionary['track_system_metrics'])
+    os.environ['MLFLOW_ENABLE_SYSTEM_METRICS_LOGGING'] = iD.track_sys_metric
+    logging.info('MLFLOW_ENABLE_SYSTEM_METRICS_LOGGING =' + iD.track_sys_metric)
     
-    with mlflow.start_run(run_name = inputDictionary['timestr']):
+    with mlflow.start_run(run_name = iD.timestr):
         
         run_id = mlflow.active_run().info.run_id
         experiment_id = mlflow.active_run().info.experiment_id
-        inputDictionary['logDir'] = inputDictionary['mlflow_dir'] + f"/mlruns/{experiment_id}/{run_id}/artifacts"
+        iD.logDir = iD.mlflow_dir + f"/mlruns/{experiment_id}/{run_id}/artifacts"
 
         # Creating an Instance of our NeuralNetwork Class
-        instance = TRAINER(**inputDictionary)
+        instance = TRAINER()
         
         instance.get_model()# Fetching the Model
         instance.get_data() # Fetching the Data

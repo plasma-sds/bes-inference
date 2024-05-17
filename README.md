@@ -22,7 +22,7 @@ Before training any neural network you need to fix mlflow to a port, this can be
 ```
 mlflow ui --port 6006
 ```
-in a command prompt. Before running the command navigate to the directory in which everything should be stored. Any other port can also be used. Then go and change the following in the inputDictionary.json;
+in a command prompt. Before running the command navigate to the directory in which everything should be stored. Any other port can also be used. Then go and change the following in the _inputDict.py_ ;
 
 1. One then needs to change the _tracking_uri_="http://127.0.0.1:6006" variable.
 2. One then needs to change the _mlflow_dir_="your directory" variable.
@@ -45,4 +45,4 @@ python main_pinn.py -p <processor>
 ```
 
 a neural network can be trained either on your CPU (porcessor = cpu) or GPU (processor = gpu). Using the _tracking_uri_ you can view the progress of the training in your browser of choice. 
-Make changes in the _inputDictionary.json_ to change the training parameters.
+Make changes in the _inputDict.py_ to change the training parameters.

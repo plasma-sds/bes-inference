@@ -4,6 +4,7 @@ Created on Fri May 17 11:34:30 2024
 
 @author: Örs
 """
+
 import tensorflow as tf
 from typing import Any
 import os
@@ -15,7 +16,6 @@ import os
 import numpy as np
 from tqdm import tqdm
 import tensorflow as tf
-from tqdm import tqdm
 import numpy as np
 import os
 import logging
@@ -28,33 +28,31 @@ sys.path.append(parent_dir)
 from utility.lossFunctions import LOSSES
 from utility.models import MODELS
 from utility.dataLoader import DATA_LOADER
+from density.inputDict import inputDictionary
+
+class TRAINER(inputDictionary):
 
 
-class TRAINER(LOSSES, MODELS, DATA_LOADER):
-
-
-    def __init__(self, **kwargs : Any):
+    def __init__(self):
 
         # Creating the timestring/ runname
+        super().__init__()
         
-        self.kwargs = kwargs
-        self.epoch = 0
-        self.best_val_loss = 10**10
-
-        # Writing all the dictionary values to the class
-        for key, value in kwargs.items():
-            setattr(self, key, value)
-            
         self.DataBatchRatio = int(self.nData / self.batchSize) 
         
-        mlflow.log_params(kwargs)
+        dic = {key:value for key, value in inputDictionary.__dict__.items() if not key.startswith('__') and not callable(key)}
+        mlflow.log_params(dic)
+        
+        self.epoch = 0
+        self.best_val_loss = 10**10
+        
         logging.info('Input Json File Saved')
             
         return
 
 
 
-    @tf.function
+
     def evaluation_step(self, inputData: tf.Tensor, outputData : tf.Tensor, train_eval : bool):
         """
         This performs one forward step through the neural network and if train_eval : True it also applies the gradient to the model
@@ -67,34 +65,38 @@ class TRAINER(LOSSES, MODELS, DATA_LOADER):
             losses (list of tf.Tensors): All the individual losses obtained by the different loss functions
             total_loss (tf.Tensors)    : One weighted loss 
         """
+
         with tf.GradientTape() as tape:
-            predictions = self.model(inputData, training=True)
             
+            predictions = self.model(inputData, training=True)
             total_loss = 0
             losses = []
-            for loss_fn, loss_weight in zip(self.losses_functions, self.loss_weights):
+            for loss_fn, loss_weight in zip(self.losses, self.loss_weights):
                 loss = loss_fn(outputData, predictions)
                 losses.append(loss)
                 total_loss += loss_weight * loss
             
-        if train_eval:
+        if train_eval: # If we want to use the losses for training
+
+            # Get current learning Rate
+            lr = self.lr_schedule(self.epoch)
+            self.optimizer.learning_rate.assign(lr)
+            mlflow.log_metric('learningRate', lr, step = self.epoch)
+            
             gradient = tape.gradient(total_loss, self.model.trainable_variables)
             self.optimizer.apply_gradients(zip(gradient, self.model.trainable_variables))
 
 
         return losses, total_loss
     
-
-
-
     def get_model(self) -> None:
         '''
         Fetching the model that should be used for training
         '''
         if self.model_name == 'cnn':
-            self.model = MODELS(**self.kwargs).makeCNN()
+            self.model = MODELS().makeCNN()
         elif self.model_name == 'elm':
-            self.model = MODELS(**self.kwargs).makeELM()
+            self.model = MODELS().makeELM()
         else:
             logging.ERROR('The model_name you selected is not available.')
         
@@ -105,10 +107,10 @@ class TRAINER(LOSSES, MODELS, DATA_LOADER):
         Fetching the data used for training and validation and testing.
         '''
         
-        loader = DATA_LOADER(**self.kwargs)
+        loader = DATA_LOADER()
         
         self.sensorWeights = loader.return_sensor_weights
-        self.InputTrain, self.InputTest, self.OutputTrain, self.OutputTest, self.InputTrain, self.InputVal, self.OutputTrain, self.OutputVal = loader.fetch_data()
+        self.InputTrain, self.InputTest, self.InputVal, self.OutputTrain, self.OutputTest, self.OutputVal = loader.fetch_data()
         
         return
 
@@ -133,9 +135,7 @@ class TRAINER(LOSSES, MODELS, DATA_LOADER):
         Initializing the Optimizer
         '''
         
-        self.losses_functions  =  [self.map_losses_and_metrics(loss) for loss in self.losses]
-        self.lr_schedule       = tf.keras.callbacks.LearningRateScheduler(self.piecewise_scheduler)
-        self.optimizer         = tf.keras.optimizers.Adam(learning_rate = self.initialLR)
+        #self.optimizer = self.optimizer(learning_rate = 0.001)
 
         logging.info('The Model has Compiled with metrics')
         
@@ -147,14 +147,15 @@ class TRAINER(LOSSES, MODELS, DATA_LOADER):
         Logs the metrics into mlflow
         """
         
+
         if train_eval:
-            for loss, name, weight in zip(losses, self.losses, self.loss_weights):
+            for loss, name, weight in zip(losses, self.losses_str, self.loss_weights):
                 if weight != 0:
                     mlflow.log_metric("loss_" + name, loss.numpy(), step = self.epoch)
                 else:
                     mlflow.log_metric("metric_" + name, loss.numpy(), step = self.epoch)
         else:
-            for loss, name in zip(losses, self.losses):
+            for loss, name in zip(losses, self.losses_str):
                 mlflow.log_metric('val_' + name, loss.numpy(), step = self.epoch)
                 
         return
@@ -178,8 +179,8 @@ class TRAINER(LOSSES, MODELS, DATA_LOADER):
     def train_model(self) -> None:
         
         for self.epoch in tqdm(range(self.numIterations), desc = 'training'):
-            
-            train_losses, total_train_loss = self.evaluation_step(inputData=self.InputTrain, outputData=self.OutputTrain, train_eval = True)
+
+            train_losses, total_train_loss= self.evaluation_step(inputData=self.InputTrain, outputData=self.OutputTrain, train_eval = True)
             val_losses, total_val_loss    = self.evaluation_step(inputData=self.InputVal, outputData=self.OutputVal, train_eval = False)
             
             self.log_metrics(losses = train_losses, train_eval = True)

@@ -2,18 +2,9 @@ import tensorflow as tf
 import logging
 
 
-
-class LOSSES:
+class LOSSES():
     
-    def __init__(self, **kwargs):
-        
-        for key, value in kwargs.items():
-            setattr(self, key, value)
-            
-        # Creating a Logger
-        logging.basicConfig(filename=self.logDir + '/log.txt', level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-        return
     
     def map_losses_and_metrics(self, kwarg : str):
         

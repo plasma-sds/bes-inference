@@ -1,13 +1,13 @@
 import tensorflow as tf
-from tensorflow.keras.layers import Dense, Dropout, Input
-from tensorflow.keras.models import Model
+from tensorflow.keras.layers import Dense, Dropout, Input # type: ignore
+from tensorflow.keras.models import Model # type: ignore
 import os
 import sys
 current_dir = os.path.dirname(os.path.abspath(__file__))
 parent_dir = os.path.dirname(current_dir)
 sys.path.append(parent_dir)
 from utility.tfelm.tfelm.ml_elm import ML_ELM
-
+from density.inputDict import inputDictionary
 import logging
 
 
@@ -16,17 +16,13 @@ In this File all the custom model architectures can be created.
 '''
 
 
-class MODELS():
+class MODELS(inputDictionary):
     
     
-    def __init__(self, **kwargs):
+    def __init__(self):
         
-        for key, value in kwargs.items():
-            setattr(self, key, value)
+        super().__init__
         
-        # Creating a Logger
-        logging.basicConfig(filename=self.logDir + '/log.txt', level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-
         return
     
     
