@@ -1,7 +1,12 @@
 import tensorflow as tf
 from tensorflow.keras.layers import Dense, Dropout, Input
 from tensorflow.keras.models import Model
-from tfelm.tfelm.ml_elm import ML_ELM
+import os
+import sys
+current_dir = os.path.dirname(os.path.abspath(__file__))
+parent_dir = os.path.dirname(current_dir)
+sys.path.append(parent_dir)
+from utility.tfelm.tfelm.ml_elm import ML_ELM
 
 import logging
 

@@ -2,7 +2,14 @@ from datetime import datetime
 import argparse
 import os
 import json
-from trainer import TRAINER
+# Append the path of the utility folder to sys.path
+import sys
+
+current_dir = os.path.dirname(os.path.abspath(__file__))
+parent_dir = os.path.dirname(current_dir)
+sys.path.append(parent_dir)
+
+from network.pinn import TRAINER
 import tensorflow as tf
 import mlflow
 import logging
@@ -61,7 +68,7 @@ if __name__ == '__main__':
         
         run_id = mlflow.active_run().info.run_id
         experiment_id = mlflow.active_run().info.experiment_id
-        inputDictionary['logDir'] = f"mlruns/{experiment_id}/{run_id}/artifacts"
+        inputDictionary['logDir'] = inputDictionary['mlflow_dir'] + f"/mlruns/{experiment_id}/{run_id}/artifacts"
 
         # Creating an Instance of our NeuralNetwork Class
         instance = TRAINER(**inputDictionary)

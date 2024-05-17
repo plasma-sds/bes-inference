@@ -20,10 +20,14 @@ import numpy as np
 import os
 import logging
 import mlflow
-
-from lossFunctions import LOSSES
-from models import MODELS
-from dataLoader import DATA_LOADER
+# Append the path of the utility folder to sys.path
+import sys
+current_dir = os.path.dirname(os.path.abspath(__file__))
+parent_dir = os.path.dirname(current_dir)
+sys.path.append(parent_dir)
+from utility.lossFunctions import LOSSES
+from utility.models import MODELS
+from utility.dataLoader import DATA_LOADER
 
 
 class TRAINER(LOSSES, MODELS, DATA_LOADER):

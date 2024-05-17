@@ -165,3 +165,8 @@ data/
 
 # This github repositary is needed for the ELM training, can be found here 'https://github.com/popcornell/tfelm'
 utility/tfelm
+
+# No need to update the inputDictionary and the log
+density/inputDictionary.json
+density/log.txt
+
