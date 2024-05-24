@@ -3,3 +3,9 @@ numpy
 pandas
 h5py
 matplotlib
+pyrcn
+scikit-learn
+seaborn
+time
+itertools
+tensorflow
