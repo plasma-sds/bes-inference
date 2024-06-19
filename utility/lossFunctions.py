@@ -12,6 +12,7 @@ class LOSSES():
                     "eval_mse":self.eval_mse,
                     "eval_mae":self.eval_mae,
                     "eval_mape":self.eval_mape,
+                    "eval_rce":self.eval_rce,
                     "eval_log_cosh":self.eval_log_cosh,
                     "eval_binary_crossentropy":self.eval_binary_crossentropy,
                     "eval_categorial_crossentropy":self.eval_categorial_crossentropy,
@@ -26,6 +27,10 @@ class LOSSES():
     
     def eval_mape(self, y_true: tf.Tensor, y_pred: tf.Tensor) -> tf.Tensor:
         error = tf.abs((y_true - y_pred) / tf.maximum(tf.abs(y_true), 1e-7))  # Avoid division by zero
+        return tf.reduce_mean(error) * 100.0
+    
+    def eval_rce(self, y_true: tf.Tensor, y_pred: tf.Tensor) -> tf.Tensor:
+        error = tf.math.reduce_sum(tf.abs(y_true - y_pred), axis = 1) / tf.maximum(tf.math.reduce_sum(y_true, axis = 1), 1e-7)  # Avoid division by zero
         return tf.reduce_mean(error) * 100.0
 
     def eval_mae(self, y_true: tf.Tensor, y_pred: tf.Tensor) -> tf.Tensor:
