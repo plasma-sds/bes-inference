@@ -37,9 +37,11 @@ class besInferenceDatapoints():
     
     def add_datapoints_bulk(self, densities, emissions, tags):
         if densities.shape[1] != self.resolution or emissions.shape[1] != self.resolution:
-            raise ValueError('tbd')
+            raise ValueError('The resolution of the input 2D density or emission arrays do not match that of the grid. Grid size: ' + str(self.resolution) + 
+                             ' Density size: ' + str(densities.shape[1]) + ' Emission size: ' + str(emissions.shape[1]))
         elif densities.shape[0] != len(tags) or emissions.shape[0] != len(tags):
-            raise ValueError('TBD')
+            raise ValueError('There is a mismatch in the number of Density: ' + str(densities.shape[0]) +
+                             ' Emission: ' + str(emissions.shape[0]) + ' and Tag: ' +str(len(tags)) + ' datapoints.')
         else:
             for tag in range(len(tags)):
                 self.datapoints.append({'density': densities[tag, :],
