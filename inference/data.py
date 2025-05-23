@@ -10,7 +10,8 @@ import numpy as np
 
 class besInferenceDatapoints():
     
-    def __init__(self, grid, energy, species, ID, zeff=None, q=None, temperature=None, verbose=None, path=None):
+    def __init__(self, grid=np.array, energy=float, species=str, ID=str, zeff=float, 
+                 q=float, temperature=np.array, verbose=str, path=None):
         if path is not None:
             self.__load_data_struct(path=path)
         else:
@@ -28,18 +29,18 @@ class besInferenceDatapoints():
     def __load_data_struct(self, path):
         with h5.File(path, 'r') as h5file:
             self.grid = h5file['grid'][()]
-            self.energy = h5file['energy'][()]
+            self.energy = int(h5file['energy'][()])
             self.species = h5file['species'][()].decode('utf-8')
-            self.resolution = h5file['resolution'][()]
-            self.zeff = h5file['zeff'][()]
-            self.q = h5file['q'][()]
+            self.resolution = int(h5file['resolution'][()])
+            self.zeff = float(h5file['zeff'][()])
+            self.q = float(h5file['q'][()])
             self.ID = h5file['ID'][()].decode('utf-8')
             self.temperature = h5file['temperature'][()]
             self.verbose = h5file['verbose'][()].decode('utf-8')
             self.datapoints = []
             self.add_datapoints_bulk(densities=h5file['density'][()], 
                                      emissions=h5file['emission'][()],
-                                     tags=list(h5file['tags'][()]))
+                                     tags=list([s.decode('utf-8') for s in h5file['tags'][()]]))
               
     def add_datapoint(self, density, emission, tag):
         if len(density) == self.resolution and len(emission) == self.resolution:
@@ -62,7 +63,8 @@ class besInferenceDatapoints():
                                         'tag': tags[tag]})
     
     def get_datapoints(self):
-        densities, emissions = np.array((len(self.datapoints), self.resolution))
+        densities = np.zeros((len(self.datapoints), self.resolution))
+        emissions = np.zeros((len(self.datapoints), self.resolution))
         tags = []
         for data_index in range(len(self.datapoints)):
             tags.append(self.datapoints[data_index]['tag'])
@@ -70,11 +72,11 @@ class besInferenceDatapoints():
             emissions[data_index, :] = self.datapoints[data_index]['emission']
         return densities, emissions, tags
     
-    def export_to_h5(self, path):
+    def export_to_h5(self, path_to_dir):
         densities, emissions, tags = self.get_datapoints()
         sdt=h5.string_dtype(encoding='utf-8')
         h5filename = 'Dataset_'+self.species+'_'+str(self.energy)+'_'+self.ID+'.h5'
-        with h5.File(path+'/'+h5filename, 'w') as h5file:
+        with h5.File(path_to_dir+'/'+h5filename, 'w') as h5file:
             h5file.create_dataset('density', data=densities)
             h5file.create_dataset('emission', data=emissions)
             h5file.create_dataset('grid', data=self.grid)
@@ -83,7 +85,8 @@ class besInferenceDatapoints():
             h5file.create_dataset('tags', (len(self.datapoints),), dtype=sdt, data=tags)
             h5file.create_dataset('species', dtype=sdt, data=self.species)
             h5file.create_dataset('ID', dtype=sdt, data=self.ID)
-            h5file.create_dataset('Zeff', data=self.zeff)
+            h5file.create_dataset('zeff', data=self.zeff)
             h5file.create_dataset('q', data=self.q)
             h5file.create_dataset('temperature', data=self.temperature)
             h5file.create_dataset('verbose', dtype=sdt, data=self.verbose)
+        print('File saved to h5: ' + path_to_dir+'/'+h5filename)
