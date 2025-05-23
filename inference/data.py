@@ -123,6 +123,16 @@ class besInferenceDatapoints():
                                         'tag': tags[tag]})
     
     def get_datapoints(self):
+        """
+        The function returns 2D arrays for other processing of the density-emission and corresponding tags.
+
+        Returns
+        -------
+        densities : TYPE 2D numpy array      DESCRIPTION 2D array of the plasma density profiles along the beam in [m-3]
+        emissions : TYPE 2D numpy array      DESCRIPTION 2D array of the emission profiles along the beam in [a.u.]
+        tags :      TYPE 1D list             DESCRIPTION 1D list of descriptors for each datapoint.
+
+        """
         densities = np.zeros((len(self.datapoints), self.resolution))
         emissions = np.zeros((len(self.datapoints), self.resolution))
         tags = []
