@@ -5,6 +5,7 @@ Created on Wed May 21 15:06:08 2025
 @author: asztalos
 """
 
+import h5py as h5
 import numpy as np
 
 class besInferenceDatapoints():
@@ -48,8 +49,29 @@ class besInferenceDatapoints():
                                         'tag': tags[tag]})
     
     def get_datapoints(self):
-        density, emission = np.array(())
+        densities, emissions = np.array((len(self.datapoints), self.resolution))
+        tags = []
+        for data_index in range(len(self.datapoints)):
+            tags.append(self.datapoints[data_index]['tag'])
+            densities[data_index, :] = self.datapoints[data_index]['density']
+            emissions[data_index, :] = self.datapoints[data_index]['emission']
+        return densities, emissions, tags
     
     def export_to_h5(self, path):
-        pass
-        
+        densities, emissions, tags = self.get_datapoints()
+        sdt=h5.string_dtype(encoding='utf-8')
+        with h5.File(path, 'w') as h5file:
+            h5file.create_dataset('density', data=densities)
+            h5file.create_dataset('emission', data=emissions)
+            h5file.create_dataset('grid', data=self.grid)
+            h5file.create_dataset('energy', data=self.energy)
+            h5file.create_dataset('resolution', data=self.resolution)
+            h5file.create_dataset('tags', (len(self.datapoints),), dtype=sdt, data=tags)
+            h5file.create_dataset('species', dtype=sdt, data=self.species)
+            h5file.create_dataset('ID', dtype=sdt, data=self.ID)
+            h5file.create_dataset('Zeff', data=self.zeff)
+            h5file.create_dataset('q', data=self.q)
+            h5file.create_dataset('temperature', data=self.temperature)
+            h5file.create_dataset('verbose', dtype=sdt, data=self.verbose)
+            
+
