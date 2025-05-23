@@ -60,6 +60,7 @@ class besInferenceDatapoints():
     def export_to_h5(self, path):
         densities, emissions, tags = self.get_datapoints()
         sdt=h5.string_dtype(encoding='utf-8')
+        h5filename = 'Dataset_'+self.species+'_'+str(self.energy)+'_'+self.ID+'.h5')
         with h5.File(path, 'w') as h5file:
             h5file.create_dataset('density', data=densities)
             h5file.create_dataset('emission', data=emissions)
