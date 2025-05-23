@@ -76,7 +76,7 @@ class besInferenceDatapoints():
         Raises
         ------
         ValueError
-            DESCRIPTION is raised if the spatial resolution of the density or emission arrays does not match that of the grid. 
+            DESCRIPTION is raised if the spatial resolution of the density or emission arrays do not match that of the grid. 
 
         Returns
         -------
@@ -90,6 +90,26 @@ class besInferenceDatapoints():
                              str(self.resolution) + ' Density size: ' + str(len(density)) + ' Emission size: ' + str(len(emission)))
     
     def add_datapoints_bulk(self, densities, emissions, tags):
+        """
+        The function adds density-emission-tag datapoints in bulk to the object.
+
+        Parameters
+        ----------
+        densities : TYPE 2D numpy array      DESCRIPTION 2D array of the plasma density profiles along the beam in [m-3]
+        emissions : TYPE 2D numpy array      DESCRIPTION 2D array of the emission profiles along the beam in [a.u.]
+        tags :      TYPE 1D list             DESCRIPTION 1D list of descriptors for each datapoint.
+
+        Raises
+        ------
+        ValueError
+            DESCRIPTION is raised if the spatial resolution of the density or emission arrays do not match that of the grid 
+            OR the number of density, emission, tag datapoints do not match.
+
+        Returns
+        -------
+        None.
+
+        """
         if densities.shape[1] != self.resolution or emissions.shape[1] != self.resolution:
             raise ValueError('The resolution of the input 2D density or emission arrays do not match that of the grid. Grid size: ' + str(self.resolution) + 
                              ' Density size: ' + str(densities.shape[1]) + ' Emission size: ' + str(emissions.shape[1]))
