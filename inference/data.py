@@ -5,13 +5,34 @@ Created on Wed May 21 15:06:08 2025
 @author: asztalos
 """
 
+import os
 import h5py as h5
 import numpy as np
 
 class besInferenceDatapoints():
     
-    def __init__(self, grid=np.array, energy=float, species=str, ID=str, zeff=float, 
+    def __init__(self, grid=np.array, energy=int, species=str, ID=str, zeff=float, 
                  q=float, temperature=np.array, verbose=str, path=None):
+        """
+        The object is desigend to hold datapoints for BES inference
+
+        Parameters
+        ----------
+        grid :          TYPE, 1D numpy array,   DESCRIPTION 1D spatial grid where density-emission pairs are featured in [m]. The default is np.array.
+        energy :        TYPE, integer,          DESCRIPTION feature the beam energy in [keV]. The default is float.
+        species :       TYPE, string,           DESCRIPTION features the type of beam material ex: H, Li, Na. The default is str.
+        ID :            TYPE, string            DESCRIPTION shows the ID for the datapoints. The default is str.
+        zeff :          TYPE, float             DESCRIPTION is the zeff of the plasma profile. The default is float.
+        q :             TYPE, float             DESCRIPTION is the average impurity charge in the plasma. The default is float.
+        temperature :   TYPE, 1D numpy array    DESCRIPTION 1D spatail grid of the plasma temperature profile in [eV]. The default is np.array.
+        verbose :       TYPE, string            DESCRIPTION contains a more verbose desciption of the dataset, beyond the ID. The default is str.
+        path :          TYPE, string            DESCRIPTION gives the path to a h5 file to load the data for inference. The default is None.
+
+        Returns
+        -------
+        None.
+
+        """
         if path is not None:
             self.__load_data_struct(path=path)
         else:
@@ -76,7 +97,7 @@ class besInferenceDatapoints():
         densities, emissions, tags = self.get_datapoints()
         sdt=h5.string_dtype(encoding='utf-8')
         h5filename = 'Dataset_'+self.species+'_'+str(self.energy)+'_'+self.ID+'.h5'
-        with h5.File(path_to_dir+'/'+h5filename, 'w') as h5file:
+        with h5.File(os.path.join(path_to_dir, h5filemane), 'w') as h5file:
             h5file.create_dataset('density', data=densities)
             h5file.create_dataset('emission', data=emissions)
             h5file.create_dataset('grid', data=self.grid)
@@ -89,4 +110,4 @@ class besInferenceDatapoints():
             h5file.create_dataset('q', data=self.q)
             h5file.create_dataset('temperature', data=self.temperature)
             h5file.create_dataset('verbose', dtype=sdt, data=self.verbose)
-        print('File saved to h5: ' + path_to_dir+'/'+h5filename)
+        print('File saved to h5: ' + os.path.join(path_to_dir, h5filename))
