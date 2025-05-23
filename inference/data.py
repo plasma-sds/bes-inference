@@ -26,8 +26,21 @@ class besInferenceDatapoints():
             self.datapoints = []
     
     def __load_data_struct(self, path):
-        pass
-    
+        with h5.File(path, 'r') as h5file:
+            self.grid = h5file['grid'][()]
+            self.energy = h5file['energy'][()]
+            self.species = h5file['species'][()].decode('utf-8')
+            self.resolution = h5file['resolution'][()]
+            self.zeff = h5file['zeff'][()]
+            self.q = h5file['q'][()]
+            self.ID = h5file['ID'][()].decode('utf-8')
+            self.temperature = h5file['temperature'][()]
+            self.verbose = h5file['verbose'][()].decode('utf-8')
+            self.datapoints = []
+            self.add_datapoints_bulk(densities=h5file['density'][()], 
+                                     emissions=h5file['emission'][()],
+                                     tags=list(h5file['tags'][()]))
+              
     def add_datapoint(self, density, emission, tag):
         if len(density) == self.resolution and len(emission) == self.resolution:
             self.datapoints.append({'density': density, 'emission': emission, 'tag': tag})
