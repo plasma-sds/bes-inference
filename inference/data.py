@@ -64,6 +64,25 @@ class besInferenceDatapoints():
                                      tags=list([s.decode('utf-8') for s in h5file['tags'][()]]))
               
     def add_datapoint(self, density, emission, tag):
+        """
+        The function adds individual datapoints of density-emission pairs with tag descriptor to a list of datapoints.
+
+        Parameters
+        ----------
+        density :   TYPE 1D numpy array     DESCRIPTION 1D array of the plasma density profile along the beam in [m-3]
+        emission :  TYPE 1D numpy array     DESCRIPTION 1D array of the emission profile along the beam in [a.u.]
+        tag :       TYPE string             DESCRIPTION is specific descriptor for the origin of the datapoint
+
+        Raises
+        ------
+        ValueError
+            DESCRIPTION is raised if the spatial resolution of the density or emission arrays does not match that of the grid. 
+
+        Returns
+        -------
+        None.
+
+        """
         if len(density) == self.resolution and len(emission) == self.resolution:
             self.datapoints.append({'density': density, 'emission': emission, 'tag': tag})
         else:
@@ -97,7 +116,7 @@ class besInferenceDatapoints():
         densities, emissions, tags = self.get_datapoints()
         sdt=h5.string_dtype(encoding='utf-8')
         h5filename = 'Dataset_'+self.species+'_'+str(self.energy)+'_'+self.ID+'.h5'
-        with h5.File(os.path.join(path_to_dir, h5filemane), 'w') as h5file:
+        with h5.File(os.path.join(path_to_dir, h5filename), 'w') as h5file:
             h5file.create_dataset('density', data=densities)
             h5file.create_dataset('emission', data=emissions)
             h5file.create_dataset('grid', data=self.grid)
