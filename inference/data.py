@@ -73,8 +73,8 @@ class besInferenceDatapoints():
     def export_to_h5(self, path):
         densities, emissions, tags = self.get_datapoints()
         sdt=h5.string_dtype(encoding='utf-8')
-        h5filename = 'Dataset_'+self.species+'_'+str(self.energy)+'_'+self.ID+'.h5')
-        with h5.File(path, 'w') as h5file:
+        h5filename = 'Dataset_'+self.species+'_'+str(self.energy)+'_'+self.ID+'.h5'
+        with h5.File(path+'/'+h5filename, 'w') as h5file:
             h5file.create_dataset('density', data=densities)
             h5file.create_dataset('emission', data=emissions)
             h5file.create_dataset('grid', data=self.grid)
@@ -87,5 +87,3 @@ class besInferenceDatapoints():
             h5file.create_dataset('q', data=self.q)
             h5file.create_dataset('temperature', data=self.temperature)
             h5file.create_dataset('verbose', dtype=sdt, data=self.verbose)
-            
-
