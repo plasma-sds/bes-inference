@@ -9,21 +9,20 @@ import numpy as np
 
 class besInferenceDatapoints():
     
-    def __init__(self, grid, energy, species, zeff, ID, temperature, q, verbose=None, path=None):
+    def __init__(self, grid, energy, species, ID, zeff=None, q=None, temperature=None, verbose=None, path=None):
         if path is not None:
             self.__load_data_struct(path=path)
-        
-
-        self.species = species
-        self.energy = energy
-        self.grid = grid
-        self.resolution = len(grid)
-        self.zeff = zeff
-        self.q = q
-        self.temperature = temperature
-        self.ID = ID
-        self.verbose = verbose
-        self.datapoints = []
+        else:
+            self.species = species
+            self.energy = energy
+            self.grid = grid
+            self.resolution = len(grid)
+            self.ID = ID
+            self.zeff = zeff
+            self.q = q
+            self.temperature = temperature
+            self.verbose = verbose
+            self.datapoints = []
     
     def __load_data_struct(self, path):
         pass
@@ -40,7 +39,7 @@ class besInferenceDatapoints():
             raise ValueError('The resolution of the input 2D density or emission arrays do not match that of the grid. Grid size: ' + str(self.resolution) + 
                              ' Density size: ' + str(densities.shape[1]) + ' Emission size: ' + str(emissions.shape[1]))
         elif densities.shape[0] != len(tags) or emissions.shape[0] != len(tags):
-            raise ValueError('There is a mismatch in the number of Density: ' + str(densities.shape[0]) +
+            raise ValueError('There is a mismatch in the number of datapoints. Density: ' + str(densities.shape[0]) +
                              ' Emission: ' + str(emissions.shape[0]) + ' and Tag: ' +str(len(tags)) + ' datapoints.')
         else:
             for tag in range(len(tags)):
@@ -51,6 +50,6 @@ class besInferenceDatapoints():
     def get_datapoints(self):
         density, emission = np.array(())
     
-    def export_to_h5(self):
+    def export_to_h5(self, path):
         pass
         
