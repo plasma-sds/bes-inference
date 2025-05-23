@@ -143,6 +143,18 @@ class besInferenceDatapoints():
         return densities, emissions, tags
     
     def export_to_h5(self, path_to_dir):
+        """
+        The functions stores the data objects content into H5 format.
+
+        Parameters
+        ----------
+        path_to_dir : TYPE string           DESCRIPTION location of the folder where the file is to be saved. The code generates the name of the file.
+
+        Returns
+        -------
+        None.
+
+        """
         densities, emissions, tags = self.get_datapoints()
         sdt=h5.string_dtype(encoding='utf-8')
         h5filename = 'Dataset_'+self.species+'_'+str(self.energy)+'_'+self.ID+'.h5'
