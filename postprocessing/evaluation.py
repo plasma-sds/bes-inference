@@ -50,3 +50,13 @@ def calc_mase_stats(y_true, y_pred, y_train, metrics):
     metrics['MASE std'] = np.sqrt(mase_sq-mase_mean**2)
     metrics['Worst MASE'] = np.max(mase)
     metrics['Best MASE'] = np.min(mase)
+
+def calc_mrcpe_stats(y_true, y_pred, metrics):
+    # Calculate MRCPE (Mean Relative Cumulative Percentage Error)
+    mrcpe= np.mean(np.mean(np.sum(np.abs(y_true - y_pred), axis=1) / np.sum(y_true, axis=1) * 100))
+    mrcpe_sq=np.mean(mrcpe**2)
+    mrcpe_mean=np.mean(mrcpe)
+    metrics['MRCPE'] = mrcpe_mean
+    metrics['MRCPE std'] = np.sqrt(mrcpe_sq-mrcpe_mean**2)
+    metrics['Worst MRCPE'] = np.max(mrcpe)
+    metrics['Best MRCPE'] = np.min(mrcpe)
