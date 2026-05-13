@@ -2,14 +2,7 @@ import os
 import flap
 import numpy as np
 
-import importlib.util
-import sys
-from pathlib import Path
-module_path = Path("../inference/data.py").resolve()
-spec = importlib.util.spec_from_file_location("data", module_path)
-data = importlib.util.module_from_spec(spec)
-sys.modules["data"] = data
-spec.loader.exec_module(data)
+from neuro_bes.data import besInferenceDatapoints
 
 def w7x_experimental_flap2database(path,shot):
     
@@ -76,7 +69,7 @@ def w7x_experimental_flap2database(path,shot):
     tags=['Time instance ' + str(i) + ' s' for i in time_instances_density]
 
     # create and populate BES dataobject instance
-    test_data=data.besInferenceDatapoints(grid=grid,energy=energy,species=species,ID=ID,zeff=zeff,q=q,temperature=temperature,verbose=verbose)
+    test_data=besInferenceDatapoints(grid=grid,energy=energy,species=species,ID=ID,zeff=zeff,q=q,temperature=temperature,verbose=verbose)
     test_data.add_datapoints_bulk(density_data, light_data, tags)
 
     # export to HDF5
