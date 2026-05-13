@@ -170,3 +170,5 @@ utility/tfelm
 density/inputDictionary.json
 density/log.txt
 
+#This locally sets preferred storage of up and downloads and data mahangement.
+local_datapaths.xml
