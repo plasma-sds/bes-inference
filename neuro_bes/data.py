@@ -45,8 +45,10 @@ class besInferenceDatapoints():
             self.q = q
             self.temperature = temperature
             self.verbose = verbose
-            self.datapoints = []
-    
+            self.densities = np.empty((0, self.resolution))
+            self.emissions = np.empty((0, self.resolution))
+            self.tags = []
+
     def __load_data_struct(self, path):
         with h5.File(path, 'r') as h5file:
             self.grid = h5file['grid'][()]
@@ -58,7 +60,9 @@ class besInferenceDatapoints():
             self.ID = h5file['ID'][()].decode('utf-8')
             self.temperature = h5file['temperature'][()]
             self.verbose = h5file['verbose'][()].decode('utf-8')
-            self.datapoints = []
+            self.densities = np.empty((0, self.resolution))
+            self.emissions = np.empty((0, self.resolution))
+            self.tags = []
             self.add_datapoints_bulk(densities=h5file['density'][()], 
                                      emissions=h5file['emission'][()],
                                      tags=list([s.decode('utf-8') for s in h5file['tags'][()]]))
@@ -83,8 +87,12 @@ class besInferenceDatapoints():
         None.
 
         """
+        density = np.asarray(density)
+        emission = np.asarray(emission)
         if len(density) == self.resolution and len(emission) == self.resolution:
-            self.datapoints.append({'density': density, 'emission': emission, 'tag': tag})
+            self.densities = np.concatenate([self.densities, density[np.newaxis, :]], axis=0)
+            self.emissions = np.concatenate([self.emissions, emission[np.newaxis, :]], axis=0)
+            self.tags.append(tag)
         else:
             raise ValueError('The input emission or density arrays do not match the size of the grid. Grid size: ' + 
                              str(self.resolution) + ' Density size: ' + str(len(density)) + ' Emission size: ' + str(len(emission)))
@@ -110,6 +118,8 @@ class besInferenceDatapoints():
         None.
 
         """
+        densities = np.asarray(densities)
+        emissions = np.asarray(emissions)
         if densities.shape[1] != self.resolution or emissions.shape[1] != self.resolution:
             raise ValueError('The resolution of the input 2D density or emission arrays do not match that of the grid. Grid size: ' + str(self.resolution) + 
                              ' Density size: ' + str(densities.shape[1]) + ' Emission size: ' + str(emissions.shape[1]))
@@ -117,10 +127,9 @@ class besInferenceDatapoints():
             raise ValueError('There is a mismatch in the number of datapoints. Density: ' + str(densities.shape[0]) +
                              ' Emission: ' + str(emissions.shape[0]) + ' and Tag: ' +str(len(tags)) + ' datapoints.')
         else:
-            for tag in range(len(tags)):
-                self.datapoints.append({'density': densities[tag, :],
-                                        'emission': emissions[tag, :],
-                                        'tag': tags[tag]})
+            self.densities = np.concatenate([self.densities, densities], axis=0)
+            self.emissions = np.concatenate([self.emissions, emissions], axis=0)
+            self.tags.extend(list(tags))
     
     def get_datapoints(self):
         """
@@ -132,15 +141,13 @@ class besInferenceDatapoints():
         emissions : TYPE 2D numpy array      DESCRIPTION 2D array of the emission profiles along the beam in [a.u.]
         tags :      TYPE 1D list             DESCRIPTION 1D list of descriptors for each datapoint.
 
+        Note
+        ----
+        The returned density and emission arrays are references to the
+        internal storage (no copy is made). Use ``np.copy`` if the caller
+        intends to mutate them. The tags list is a fresh copy.
         """
-        densities = np.zeros((len(self.datapoints), self.resolution))
-        emissions = np.zeros((len(self.datapoints), self.resolution))
-        tags = []
-        for data_index in range(len(self.datapoints)):
-            tags.append(self.datapoints[data_index]['tag'])
-            densities[data_index, :] = self.datapoints[data_index]['density']
-            emissions[data_index, :] = self.datapoints[data_index]['emission']
-        return densities, emissions, tags
+        return self.densities, self.emissions, list(self.tags)
     
     def export_to_h5(self, path_to_dir):
         """
@@ -155,16 +162,15 @@ class besInferenceDatapoints():
         None.
 
         """
-        densities, emissions, tags = self.get_datapoints()
-        sdt=h5.string_dtype(encoding='utf-8')
-        h5filename = 'Dataset_'+self.species+'_'+str(self.energy)+'_'+self.ID+'.h5'
+        sdt = h5.string_dtype(encoding='utf-8')
+        h5filename = 'Dataset_' + self.species + '_' + str(self.energy) + '_' + self.ID + '.h5'
         with h5.File(os.path.join(path_to_dir, h5filename), 'w') as h5file:
-            h5file.create_dataset('density', data=densities)
-            h5file.create_dataset('emission', data=emissions)
+            h5file.create_dataset('density', data=self.densities)
+            h5file.create_dataset('emission', data=self.emissions)
             h5file.create_dataset('grid', data=self.grid)
             h5file.create_dataset('energy', data=self.energy)
             h5file.create_dataset('resolution', data=self.resolution)
-            h5file.create_dataset('tags', (len(self.datapoints),), dtype=sdt, data=tags)
+            h5file.create_dataset('tags', (len(self.tags),), dtype=sdt, data=self.tags)
             h5file.create_dataset('species', dtype=sdt, data=self.species)
             h5file.create_dataset('ID', dtype=sdt, data=self.ID)
             h5file.create_dataset('zeff', data=self.zeff)
