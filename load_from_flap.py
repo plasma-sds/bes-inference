@@ -30,13 +30,20 @@ def w7x_experimental_flap2database(path, shot, save_path="/home/molnarbalazs/dat
     try:
         file_list=os.listdir(os.path.join(path,shot))
     except FileNotFoundError:
-        raise ValueError("Directory " + file_list + " does not exist")
+        raise ValueError("Directory " + os.path.join(path,shot) + " does not exist")
 
     # find light, density, reconstructed light datasources
     # load them with flap
-    file_name_light=file_list[[i for i in range(len(file_list)) if ('light_ds_orig' in file_list[i])][0]]
-    file_name_density=file_list[[i for i in range(len(file_list)) if ('dens' in file_list[i])][0]]
-    file_name_light_recon=file_list[[i for i in range(len(file_list)) if ('light_recon' in file_list[i])][0]]
+    file_name_light=[i for i in file_list if ('light_ds_orig' in i)]
+    file_name_density=[i for i in file_list if ('dens' in i)]
+    file_name_light_recon=[i for i in file_list if ('light_recon' in i)]
+    if len(file_name_light)>1:
+        raise ValueError("There is more than one data source for shot " + shot)
+    if len(file_name_light)==0:
+        raise ValueError("Data source not found for shot " + shot)
+    file_name_light=file_name_light[0]
+    file_name_density=file_name_density[0]
+    file_name_light_recon=file_name_light_recon[0]
     light=flap.load(os.path.join(path,shot,file_name_light))
     density=flap.load(os.path.join(path,shot,file_name_density))
     light_recon=flap.load(os.path.join(path,shot,file_name_light_recon))
@@ -45,6 +52,9 @@ def w7x_experimental_flap2database(path, shot, save_path="/home/molnarbalazs/dat
     # Catch when time instances differ (they should match in principle)
     time_instances_light_recon=light_recon.coordinate('Time')[0][:,0]
     time_instances_density=density.coordinate('Time')[0][:,0]
+    avg_timedelta=np.mean(np.diff(time_instances_density))
+    if avg_timedelta<0.01:
+        raise ValueError(f"Downsampling frequency is above limit ({int(1/avg_timedelta)} Hz) in shot " + shot)
     if not np.any(time_instances_light_recon==time_instances_density):
         raise ValueError("Error: Light recon and density time instances do not match for shot " + shot)
 
@@ -79,18 +89,25 @@ def w7x_experimental_flap2database(path, shot, save_path="/home/molnarbalazs/dat
     grid=r_coord
     energy=0
     species="Na"
-    ID="we_"+shot
     zeff=0
     q=0
     temperature=np.array(0)
-    verbose="W7X experimental data shot " + shot + ", 10Hz averaging, curated for good SPADE recons"
 
     # create tags with timing information
     tags=['Time instance ' + str(i) + ' s' for i in time_instances_density]
 
-    # create and populate BES dataobject instance
+    # create and populate experimental BES dataobject instance
+    ID="we_"+shot
+    verbose=f"W7X experimental data shot " + shot + ", {int(1/avg_timedelta)}Hz averaging, curated for good SPADE recons"
     test_data=besInferenceDatapoints(grid=grid,energy=energy,species=species,ID=ID,zeff=zeff,q=q,temperature=temperature,verbose=verbose)
     test_data.add_datapoints_bulk(density_data, light_data, tags)
 
+    # create and populate synthetic BES dataobject instance
+    ID="ws_"+shot
+    verbose=f"W7X synthetic data shot " + shot + ", {int(1/avg_timedelta)}Hz averaging, curated for good SPADE recons"
+    test_data_synthetic=besInferenceDatapoints(grid=grid,energy=energy,species=species,ID=ID,zeff=zeff,q=q,temperature=temperature,verbose=verbose)
+    test_data_synthetic.add_datapoints_bulk(density_data, light_recon_data, tags)
+
     # export to HDF5
     test_data.export_to_h5(path_to_dir=save_path)
+    test_data_synthetic.export_to_h5(path_to_dir=save_path)
