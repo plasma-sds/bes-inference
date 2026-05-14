@@ -163,12 +163,5 @@ cython_debug/
 
 data/
 
-# This github repositary is needed for the ELM training, can be found here 'https://github.com/popcornell/tfelm'
-utility/tfelm
-
-# No need to update the inputDictionary and the log
-density/inputDictionary.json
-density/log.txt
-
 #This locally sets preferred storage of up and downloads and data mahangement.
 local_datapaths.xml
