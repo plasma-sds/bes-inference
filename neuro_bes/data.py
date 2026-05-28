@@ -11,20 +11,20 @@ import numpy as np
 
 class besInferenceDatapoints():
     
-    def __init__(self, grid=np.array, energy=int, species=str, ID=str, zeff=float, 
-                 q=float, temperature=np.array, verbose=str, path=None):
+    def __init__(self, grid=np.array, energy=None, species=str, ID=str, zeff=None,
+                 q=None, temperature=None, verbose=str, path=None):
         """
         The object is desigend to hold datapoints for BES inference
 
         Parameters
         ----------
         grid :          TYPE, 1D numpy array,   DESCRIPTION 1D spatial grid where density-emission pairs are featured in [m]. The default is np.array.
-        energy :        TYPE, integer,          DESCRIPTION feature the beam energy in [keV]. The default is float.
+        energy :        TYPE, integer,          DESCRIPTION feature the beam energy in [keV]. If not provided, defaults to np.nan.
         species :       TYPE, string,           DESCRIPTION features the type of beam material ex: H, Li, Na. The default is str.
         ID :            TYPE, string            DESCRIPTION shows the ID for the datapoints. The default is str.
-        zeff :          TYPE, float             DESCRIPTION is the zeff of the plasma profile. The default is float.
-        q :             TYPE, float             DESCRIPTION is the average impurity charge in the plasma. The default is float.
-        temperature :   TYPE, 1D numpy array    DESCRIPTION 1D spatail grid of the plasma temperature profile in [eV]. The default is np.array.
+        zeff :          TYPE, float             DESCRIPTION is the zeff of the plasma profile. If not provided, defaults to np.nan.
+        q :             TYPE, float             DESCRIPTION is the average impurity charge in the plasma. If not provided, defaults to np.nan.
+        temperature :   TYPE, 2D numpy array    DESCRIPTION 2D array of the plasma temperature profiles in [eV]. If not provided, defaults to np.empty((0, resolution)) filled with np.nan.
         verbose :       TYPE, string            DESCRIPTION contains a more verbose desciption of the dataset, beyond the ID. The default is str.
         path :          TYPE, string            DESCRIPTION gives the path to a h5 file to load the data for inference. The default is None.
 
@@ -37,13 +37,13 @@ class besInferenceDatapoints():
             self.__load_data_struct(path=path)
         else:
             self.species = species
-            self.energy = energy
+            self.energy = energy if energy is not None else np.nan
             self.grid = grid
             self.resolution = len(grid)
             self.ID = ID
-            self.zeff = zeff
-            self.q = q
-            self.temperature = temperature
+            self.zeff = zeff if zeff is not None else np.nan
+            self.q = q if q is not None else np.nan
+            self.temperature = temperature if temperature is not None else np.empty((0, self.resolution)) * np.nan
             self.verbose = verbose
             self.densities = np.empty((0, self.resolution))
             self.emissions = np.empty((0, self.resolution))
