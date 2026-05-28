@@ -52,7 +52,8 @@ class besInferenceDatapoints():
     def __load_data_struct(self, path):
         with h5.File(path, 'r') as h5file:
             self.grid = h5file['grid'][()]
-            self.energy = int(h5file['energy'][()])
+            energy_val = float(h5file['energy'][()])
+            self.energy = int(energy_val) if not np.isnan(energy_val) else np.nan
             self.species = h5file['species'][()].decode('utf-8')
             self.resolution = int(h5file['resolution'][()])
             self.zeff = float(h5file['zeff'][()])
@@ -168,13 +169,13 @@ class besInferenceDatapoints():
             h5file.create_dataset('density', data=self.densities)
             h5file.create_dataset('emission', data=self.emissions)
             h5file.create_dataset('grid', data=self.grid)
-            h5file.create_dataset('energy', data=self.energy)
+            h5file.create_dataset('energy', data=np.float64(self.energy))
             h5file.create_dataset('resolution', data=self.resolution)
             h5file.create_dataset('tags', (len(self.tags),), dtype=sdt, data=self.tags)
             h5file.create_dataset('species', dtype=sdt, data=self.species)
             h5file.create_dataset('ID', dtype=sdt, data=self.ID)
-            h5file.create_dataset('zeff', data=self.zeff)
-            h5file.create_dataset('q', data=self.q)
-            h5file.create_dataset('temperature', data=self.temperature)
+            h5file.create_dataset('zeff', data=np.float64(self.zeff))
+            h5file.create_dataset('q', data=np.float64(self.q))
+            h5file.create_dataset('temperature', data=np.asarray(self.temperature, dtype=np.float64))
             h5file.create_dataset('verbose', dtype=sdt, data=self.verbose)
         print('File saved to h5: ' + os.path.join(path_to_dir, h5filename))
