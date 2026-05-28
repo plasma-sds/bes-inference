@@ -1,9 +1,7 @@
-scipy
-numpy
-pandas
 h5py
-matplotlib
-pyrcn
+numpy
+onnx
 scikit-learn
-seaborn
+scipy
 tensorflow
+tf2onnx
