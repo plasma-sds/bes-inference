@@ -1,6 +1,4 @@
 import tensorflow as tf
-import logging
-
 
 class LOSSES():
     
