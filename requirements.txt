@@ -5,3 +5,4 @@ scikit-learn
 scipy
 tensorflow
 tf2onnx
+pandas
