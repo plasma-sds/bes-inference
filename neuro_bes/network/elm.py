@@ -3,7 +3,10 @@ import tensorflow as tf
 import tf2onnx
 import onnx
 
-tf.keras.mixed_precision.set_global_policy("float32")
+_DTYPE_MAP = {
+    "float32": tf.float32,
+    "float64": tf.float64,
+}
 
 
 class EnsembleELM_Bayesian(tf.keras.Model):
@@ -23,10 +26,17 @@ class EnsembleELM_Bayesian(tf.keras.Model):
         alpha=0,
         name="EnsembleELM",
         onnx_opset=13,
-        output_path="model.onnx"
+        output_path="model.onnx",
+        dtype="float32",
     ):
         super().__init__(name=name)
-        dtype = tf.float32
+        if isinstance(dtype, str):
+            if dtype not in _DTYPE_MAP:
+                raise ValueError(f"dtype must be 'float32' or 'float64', got '{dtype}'")
+            self._float_dtype = _DTYPE_MAP[dtype]
+        else:
+            self._float_dtype = dtype
+        dtype = self._float_dtype
 
         self.input_dim = input_dim
         self.hidden_units_1 = hidden_units_1
@@ -91,17 +101,17 @@ class EnsembleELM_Bayesian(tf.keras.Model):
     def build(self, input_shape):
         input_shape = tf.TensorShape([None, self.input_dim])
         super().build(input_shape)
-        self._set_inputs(tf.keras.Input(shape=(self.input_dim,), dtype=tf.float32))
+        self._set_inputs(tf.keras.Input(shape=(self.input_dim,), dtype=self._float_dtype))
 
     def call(self, inputs):
-        inputs = tf.convert_to_tensor(inputs, dtype=tf.float32)
+        inputs = tf.convert_to_tensor(inputs, dtype=self._float_dtype)
         inputs = self._scale_inputs(inputs)
 
         s = tf.matmul(tf.expand_dims(inputs, 0), self.w1) + tf.expand_dims(self.b1, 1)
         feature_mean = tf.expand_dims(self.running_mean, axis=1)
         feature_std = tf.expand_dims(self.running_std, axis=1)
         s = (s - feature_mean) / feature_std
-        s = s * tf.constant(-0.5, dtype=tf.float32) + tf.constant(-0.5, dtype=tf.float32)
+        s = s * tf.constant(-0.5, dtype=self._float_dtype) + tf.constant(-0.5, dtype=self._float_dtype)
         x = tf.tanh(s)
 
         h = tf.matmul(x, self.k2) + tf.expand_dims(self.b2, 1)
@@ -128,8 +138,8 @@ class EnsembleELM_Bayesian(tf.keras.Model):
 
     def train_step(self, data):
         x, y = data
-        x = tf.cast(x, tf.float32)
-        y = tf.cast(y, tf.float32)
+        x = tf.cast(x, self._float_dtype)
+        y = tf.cast(y, self._float_dtype)
 
         # fp32 precision workaround for large-magnitude inputs
         scale_factor = 1e18
@@ -158,7 +168,7 @@ class EnsembleELM_Bayesian(tf.keras.Model):
         H = tf.matmul(x, self.k2) + tf.expand_dims(self.b2, 1)
         H = tf.nn.softmax(H, axis=-1)
 
-        I = tf.expand_dims(tf.eye(self.hidden_units_2, dtype=tf.float32), axis=0)
+        I = tf.expand_dims(tf.eye(self.hidden_units_2, dtype=self._float_dtype), axis=0)
         HtH = tf.matmul(H, H, transpose_a=True)
         HtY = tf.matmul(H, tf.expand_dims(y, 0), transpose_a=True)
 
@@ -190,7 +200,8 @@ def make_ensemble_elm(
     alpha=0,
     name="VectorizedEnsembleELM",
     onnx_opset=13,
-    output_path="model.onnx"
+    output_path="model.onnx",
+    dtype="float32",
 ):
     """
     Builds an ensemble ELM with Bayesian uncertainty estimation.
@@ -204,6 +215,7 @@ def make_ensemble_elm(
         name (str): Model name.
         onnx_opset (int): ONNX opset version for export.
         output_path (str): Default ONNX export path.
+        dtype (str): Floating-point precision for all network components — 'float32' or 'float64'.
 
     Returns:
         EnsembleELM_Bayesian: The built ensemble ELM model.
@@ -221,7 +233,8 @@ def make_ensemble_elm(
         alpha=alpha,
         name=name,
         onnx_opset=onnx_opset,
-        output_path=output_path
+        output_path=output_path,
+        dtype=dtype,
     )
 
 

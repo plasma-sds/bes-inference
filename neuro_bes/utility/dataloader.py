@@ -79,3 +79,75 @@ def load_w7x_synthetic_data(file_path, bes_obj_id):
     bes_data.add_datapoints_bulk(density, emission, tags)
 
     return bes_data
+
+def load_asdex_experimental_data(file_path, bes_obj_id, exclude=[]):
+    """
+    Loads experimental ASDEX data from an HDF5 file and returns a besInferenceDatapoints object. 
+    The function will filter out shots which have different grid from the first shot encountered during loading.
+    Unknown species, energy, temperature, q, and z_eff are set to NaN. 
+
+    Parameters:
+    ----------
+    file_path : str
+        The path to the HDF5 file containing the experimental ASDEX data.
+    bes_obj_id : str
+        The ID to assign to the besInferenceDatapoints object.
+    exclude : list of str, optional
+        A list of shot names to exclude from loading. Default is an empty list.
+        
+    Returns:
+    -------
+    besInferenceDatapoints
+        An object containing the loaded and processed data.
+    """
+    with h5py.File(file_path) as f:
+        emission = []
+        density = []
+        r_coord = []
+        shots = list(f.keys())
+        print("Shots found in the HDF5 file:", shots)
+        print("Shots skipped:", exclude)
+        for shot in shots:
+            if shot in exclude:
+                pass
+            else:
+                r_coord.append(f[shot]["x2"][:])
+                emission.append(f[shot]["lib2mod"][:])
+                density.append(f[shot]["ne"][:])
+
+    
+
+    r_coord=np.vstack(r_coord[:])
+    print("Grid of the different shots:", r_coord)
+    mask_samegrid=np.all(r_coord[0]==r_coord,axis=1)
+    print("Mask applied for shots with same grid: ", mask_samegrid)
+    emission=[arr for arr, keep in zip(emission[:], mask_samegrid) if keep] #masking out shots with different grids
+    density=[arr for arr, keep in zip(density[:], mask_samegrid) if keep] #masking out shots with different grids
+    density=np.vstack(density[:]) 
+    emission=np.vstack(emission[:])
+    
+    filename = os.path.basename(file_path)
+    grid = r_coord[0]
+    # get species, energy, temperature, q, z_eff
+    species = "Li"
+    # energy is
+    energy = np.nan
+    # temperature is
+    temperature = np.nan
+    # q is
+    q = np.nan
+    # z_eff is
+    z_eff = np.nan
+
+
+    verbose="data loaded from "+file_path
+    tags=[str(i) for i in range(density.shape[0])]
+
+    bes_data=besInferenceDatapoints(grid=grid,energy=energy,species=species,ID=bes_obj_id,zeff=z_eff,q=q,temperature=temperature,verbose=verbose)
+    print(grid)
+    print("size of grid: ", bes_data.grid.shape)
+    print("size of density: ", density.shape)
+    print("size of emission: ", emission.shape)
+    bes_data.add_datapoints_bulk(density, emission, tags)
+
+    return bes_data
