@@ -1,5 +1,8 @@
-scipy
-numpy
-pandas
 h5py
-matplotlib
+numpy
+onnx
+scikit-learn
+scipy
+tensorflow
+tf2onnx
+pandas
