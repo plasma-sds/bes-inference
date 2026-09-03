@@ -36,7 +36,7 @@ class TestBesInferenceDatapoints(unittest.TestCase):
         self.emissions = rng.uniform(0.0, 1.0, size=(self.n_points, self.resolution))
         self.density_errors = 0.1 * self.densities
         self.emission_errors = 0.1 * self.emissions
-        self.tags = ['point_' + str(i) for i in range(self.n_points)]
+        self.tags = ['Profile_' + str(i) for i in range(self.n_points)]
 
         # A ready-to-use, empty object built on the test grid.
         self.dataset = besInferenceDatapoints(
