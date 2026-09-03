@@ -229,10 +229,44 @@ class TestBesInferenceDatapoints(unittest.TestCase):
     # get_datapoints
     # ------------------------------------------------------------------ #
     def test_get_datapoints(self):
-        pass
+        self.dataset.add_datapoints_bulk(self.densities, self.emissions, self.tags,
+                                         density_errors=self.density_errors,
+                                         emission_errors=self.emission_errors)
+
+        result = self.dataset.get_datapoints()
+
+        # Default call returns the legacy 3-tuple (densities, emissions, tags).
+        self.assertEqual(len(result), 3)
+        densities, emissions, tags = result
+        np.testing.assert_array_equal(densities, self.densities)
+        np.testing.assert_array_equal(emissions, self.emissions)
+        self.assertEqual(tags, self.tags)
+
+        # The returned tags list is a fresh copy (mutating it must not affect the object).
+        tags.append('extra')
+        self.assertEqual(len(self.dataset.tags), self.n_points)
+
+    def test_get_datapoints_empty(self):
+        densities, emissions, tags = self.dataset.get_datapoints()
+        self.assertEqual(densities.shape, (0, self.resolution))
+        self.assertEqual(emissions.shape, (0, self.resolution))
+        self.assertEqual(tags, [])
 
     def test_get_datapoints_include_errors(self):
-        pass
+        self.dataset.add_datapoints_bulk(self.densities, self.emissions, self.tags,
+                                         density_errors=self.density_errors,
+                                         emission_errors=self.emission_errors)
+
+        result = self.dataset.get_datapoints(include_errors=True)
+
+        # With include_errors the 5-tuple adds the error blocks before tags.
+        self.assertEqual(len(result), 5)
+        densities, emissions, density_errors, emission_errors, tags = result
+        np.testing.assert_array_equal(densities, self.densities)
+        np.testing.assert_array_equal(emissions, self.emissions)
+        np.testing.assert_array_equal(density_errors, self.density_errors)
+        np.testing.assert_array_equal(emission_errors, self.emission_errors)
+        self.assertEqual(tags, self.tags)
 
     # ------------------------------------------------------------------ #
     # export_to_h5
