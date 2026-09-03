@@ -46,7 +46,34 @@ class TestBesInferenceDatapoints(unittest.TestCase):
     # __init__
     # ------------------------------------------------------------------ #
     def test_init(self):
-        pass
+        # Grid and derived resolution.
+        np.testing.assert_array_equal(self.dataset.grid, self.grid)
+        self.assertEqual(self.dataset.resolution, self.resolution)
+
+        # Scalar / string metadata is stored as provided.
+        self.assertEqual(self.dataset.energy, self.energy)
+        self.assertEqual(self.dataset.species, self.species)
+        self.assertEqual(self.dataset.ID, self.ID)
+        self.assertEqual(self.dataset.zeff, self.zeff)
+        self.assertEqual(self.dataset.q, self.q)
+        self.assertEqual(self.dataset.verbose, self.verbose)
+        np.testing.assert_array_equal(self.dataset.temperature, self.temperature)
+
+        # Datapoint containers start empty with the correct 2D shape.
+        for arr in (self.dataset.densities, self.dataset.emissions,
+                    self.dataset.density_errors, self.dataset.emission_errors):
+            self.assertEqual(arr.shape, (0, self.resolution))
+        self.assertEqual(self.dataset.tags, [])
+
+    def test_init_defaults(self):
+        # Optional numeric fields default to NaN when not provided.
+        dataset = besInferenceDatapoints(grid=self.grid, ID=self.ID)
+        self.assertTrue(np.isnan(dataset.energy))
+        self.assertTrue(np.isnan(dataset.zeff))
+        self.assertTrue(np.isnan(dataset.q))
+
+        # Temperature defaults to an empty (0, resolution) block.
+        self.assertEqual(dataset.temperature.shape, (0, self.resolution))
 
     def test_init_from_path(self):
         pass
