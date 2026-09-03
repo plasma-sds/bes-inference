@@ -7,8 +7,12 @@ Run with:
     python -m unittest discover -s tests
 """
 
+import os
+import tempfile
 import unittest
+
 import numpy as np
+
 from neuro_bes.data import besInferenceDatapoints
 
 
@@ -86,9 +90,6 @@ class TestBesInferenceDatapoints(unittest.TestCase):
 
         # Temperature defaults to an empty (0, resolution) block.
         self.assertEqual(dataset.temperature.shape, (0, self.resolution))
-
-    def test_init_from_path(self):
-        pass
 
     # ------------------------------------------------------------------ #
     # add_datapoint
@@ -272,7 +273,38 @@ class TestBesInferenceDatapoints(unittest.TestCase):
     # export_to_h5
     # ------------------------------------------------------------------ #
     def test_export_to_h5(self):
-        pass
+        self.dataset.add_datapoints_bulk(self.densities, self.emissions, self.tags,
+                                         density_errors=self.density_errors,
+                                         emission_errors=self.emission_errors)
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            self.dataset.export_to_h5(tmp_dir)
+
+            # The file name is derived from species, energy, and ID.
+            expected_name = 'Dataset_' + self.species + '_' + str(self.energy) + '_' + self.ID + '.h5'
+            expected_path = os.path.join(tmp_dir, expected_name)
+            self.assertTrue(os.path.isfile(expected_path))
+
+            # Re-loading the file reproduces the exported content.
+            reloaded = besInferenceDatapoints(path=expected_path)
+
+        self.assertEqual(reloaded.species, self.species)
+        self.assertEqual(reloaded.energy, self.energy)
+        self.assertEqual(reloaded.ID, self.ID)
+        self.assertEqual(reloaded.resolution, self.resolution)
+        self.assertEqual(reloaded.zeff, self.zeff)
+        self.assertEqual(reloaded.q, self.q)
+        self.assertEqual(reloaded.verbose, self.verbose)
+        np.testing.assert_array_equal(reloaded.grid, self.grid)
+        np.testing.assert_array_equal(reloaded.temperature, self.temperature)
+
+        densities, emissions, density_errors, emission_errors, tags = \
+            reloaded.get_datapoints(include_errors=True)
+        np.testing.assert_allclose(densities, self.densities)
+        np.testing.assert_allclose(emissions, self.emissions)
+        np.testing.assert_allclose(density_errors, self.density_errors)
+        np.testing.assert_allclose(emission_errors, self.emission_errors)
+        self.assertEqual(tags, self.tags)
 
 
 if __name__ == '__main__':
