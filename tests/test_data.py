@@ -38,6 +38,18 @@ class TestBesInferenceDatapoints(unittest.TestCase):
         self.emission_errors = 0.1 * self.emissions
         self.tags = ['point_' + str(i) for i in range(self.n_points)]
 
+        # A ready-to-use, empty object built on the test grid.
+        self.dataset = besInferenceDatapoints(
+            grid=self.grid,
+            energy=self.energy,
+            species=self.species,
+            ID=self.ID,
+            zeff=self.zeff,
+            q=self.q,
+            temperature=self.temperature,
+            verbose=self.verbose,
+        )
+
     def tearDown(self):
         """Clean up after each test method."""
         self.dataset = None
