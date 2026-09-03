@@ -163,16 +163,67 @@ class TestBesInferenceDatapoints(unittest.TestCase):
     # add_datapoints_bulk
     # ------------------------------------------------------------------ #
     def test_add_datapoints_bulk(self):
-        pass
+        self.dataset.add_datapoints_bulk(self.densities, self.emissions, self.tags)
+
+        # All 10 rows were appended to each container.
+        self.assertEqual(self.dataset.densities.shape, (self.n_points, self.resolution))
+        self.assertEqual(self.dataset.emissions.shape, (self.n_points, self.resolution))
+        self.assertEqual(self.dataset.tags, self.tags)
+        np.testing.assert_array_equal(self.dataset.densities, self.densities)
+        np.testing.assert_array_equal(self.dataset.emissions, self.emissions)
+
+        # Without explicit errors, all-NaN blocks are stored.
+        self.assertEqual(self.dataset.density_errors.shape, (self.n_points, self.resolution))
+        self.assertEqual(self.dataset.emission_errors.shape, (self.n_points, self.resolution))
+        self.assertTrue(np.all(np.isnan(self.dataset.density_errors)))
+        self.assertTrue(np.all(np.isnan(self.dataset.emission_errors)))
 
     def test_add_datapoints_bulk_with_errors(self):
-        pass
+        self.dataset.add_datapoints_bulk(self.densities, self.emissions, self.tags,
+                                         density_errors=self.density_errors,
+                                         emission_errors=self.emission_errors)
+
+        self.assertEqual(self.dataset.density_errors.shape, (self.n_points, self.resolution))
+        self.assertEqual(self.dataset.emission_errors.shape, (self.n_points, self.resolution))
+        np.testing.assert_array_equal(self.dataset.density_errors, self.density_errors)
+        np.testing.assert_array_equal(self.dataset.emission_errors, self.emission_errors)
+
+    def test_add_datapoints_bulk_accumulates(self):
+        # Two successive bulk additions accumulate rather than overwrite.
+        self.dataset.add_datapoints_bulk(self.densities, self.emissions, self.tags)
+        self.dataset.add_datapoints_bulk(self.densities, self.emissions, self.tags)
+
+        self.assertEqual(self.dataset.densities.shape, (2 * self.n_points, self.resolution))
+        self.assertEqual(self.dataset.emissions.shape, (2 * self.n_points, self.resolution))
+        self.assertEqual(len(self.dataset.tags), 2 * self.n_points)
 
     def test_add_datapoints_bulk_resolution_mismatch(self):
-        pass
+        bad_densities = np.ones((self.n_points, self.resolution + 1))
+        with self.assertRaises(ValueError):
+            self.dataset.add_datapoints_bulk(bad_densities, self.emissions, self.tags)
+
+        bad_emissions = np.ones((self.n_points, self.resolution - 1))
+        with self.assertRaises(ValueError):
+            self.dataset.add_datapoints_bulk(self.densities, bad_emissions, self.tags)
 
     def test_add_datapoints_bulk_count_mismatch(self):
-        pass
+        # Fewer tags than density/emission rows.
+        with self.assertRaises(ValueError):
+            self.dataset.add_datapoints_bulk(self.densities, self.emissions, self.tags[:-1])
+
+        # Mismatched number of density vs emission rows.
+        with self.assertRaises(ValueError):
+            self.dataset.add_datapoints_bulk(self.densities, self.emissions[:-1], self.tags)
+
+    def test_add_datapoints_bulk_error_shape_mismatch(self):
+        # Provided error blocks with the wrong shape raise.
+        with self.assertRaises(ValueError):
+            self.dataset.add_datapoints_bulk(self.densities, self.emissions, self.tags,
+                                             density_errors=np.ones((self.n_points, self.resolution + 1)))
+
+        with self.assertRaises(ValueError):
+            self.dataset.add_datapoints_bulk(self.densities, self.emissions, self.tags,
+                                             emission_errors=np.ones((self.n_points - 1, self.resolution)))
 
     # ------------------------------------------------------------------ #
     # get_datapoints
