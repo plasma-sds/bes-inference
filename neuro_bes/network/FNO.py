@@ -183,8 +183,11 @@ class FNO1d(tf.keras.Model):
 
         self.conv0 = SpectralConv1D(width, width, modes, dtype=dtype)
         self.convend = SpectralConv1D(width, width, modes, dtype=dtype)
-        self.w0 = tf.keras.layers.Conv1D(width, kernel_size=1, dtype=dtype)
-        self.w3 = tf.keras.layers.Conv1D(width, kernel_size=1, dtype=dtype)
+        # Dense rather than Conv1D(kernel_size=1) -- mathematically identical (a 1x1 conv is just a
+        # per-position linear projection) but exports to ONNX as MatMul instead of Conv; ONNX Runtime
+        # has no float64 kernel for Conv, so a float64 model built with Conv1D here fails to export.
+        self.w0 = tf.keras.layers.Dense(width, dtype=dtype)
+        self.w3 = tf.keras.layers.Dense(width, dtype=dtype)
 
         self.fc1 = tf.keras.layers.Dense(fc_units, activation="relu", dtype=dtype)
         self.fc2 = tf.keras.layers.Dense(1, dtype=dtype)

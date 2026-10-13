@@ -58,9 +58,9 @@ class EnsembleELM_Bayesian(tf.keras.Model):
         np.random.seed(42)
         w1_list, b1_list = [], [] # lists to hold weights and biases for each model in the ensemble
         for _ in range(num_models):
-            tf.keras.utils.set_random_seed(np.random.randint(0))
-            w_init = tf.keras.initializers.RandomUniform(minval=-1.0, maxval=1.0 - 1e-7, seed=np.random.randint(0))
-            b_init = tf.keras.initializers.RandomUniform(minval=-1.0, maxval=1.0 - 1e-7, seed=np.random.randint(0))
+            tf.keras.utils.set_random_seed(np.random.randint(2**31 - 1))
+            w_init = tf.keras.initializers.RandomUniform(minval=-1.0, maxval=1.0 - 1e-7, seed=np.random.randint(2**31 - 1))
+            b_init = tf.keras.initializers.RandomUniform(minval=-1.0, maxval=1.0 - 1e-7, seed=np.random.randint(2**31 - 1))
             w1_list.append(w_init((input_dim, hidden_units_1), dtype=dtype))
             b1_list.append(b_init((hidden_units_1,), dtype=dtype))
 
@@ -72,11 +72,11 @@ class EnsembleELM_Bayesian(tf.keras.Model):
         # Second hidden layer — frozen random projection
         k2_list, b2_list = [], []
         for _ in range(num_models):
-            tf.keras.utils.set_random_seed(np.random.randint(0))
-            k_init = tf.keras.initializers.RandomUniform(minval=-0.75, maxval=0.75, seed=np.random.randint(0))
+            tf.keras.utils.set_random_seed(np.random.randint(2**31 - 1))
+            k_init = tf.keras.initializers.RandomUniform(minval=-0.75, maxval=0.75, seed=np.random.randint(2**31 - 1))
             k2_list.append(k_init((hidden_units_1, hidden_units_2), dtype=dtype))
-            tf.keras.utils.set_random_seed(np.random.randint(0))
-            b_init = tf.keras.initializers.RandomUniform(minval=-1.0, maxval=1.0 - 1e-7, seed=np.random.randint(0))
+            tf.keras.utils.set_random_seed(np.random.randint(2**31 - 1))
+            b_init = tf.keras.initializers.RandomUniform(minval=-1.0, maxval=1.0 - 1e-7, seed=np.random.randint(2**31 - 1))
             b2_list.append(b_init((hidden_units_2,), dtype=dtype))
 
         self.k2 = tf.Variable(tf.stack(k2_list), trainable=False)
@@ -97,11 +97,6 @@ class EnsembleELM_Bayesian(tf.keras.Model):
 
     def _unscale_outputs(self, y_scaled):
         return y_scaled * (self.output_std + 1e-8) + self.output_mean
-
-    def build(self, input_shape):
-        input_shape = tf.TensorShape([None, self.input_dim])
-        super().build(input_shape)
-        self._set_inputs(tf.keras.Input(shape=(self.input_dim,), dtype=self._float_dtype))
 
     def call(self, inputs):
         inputs = tf.convert_to_tensor(inputs, dtype=self._float_dtype)
@@ -135,6 +130,29 @@ class EnsembleELM_Bayesian(tf.keras.Model):
         ci_upper = tf.nn.relu(mean_pred + z * std_pred)
 
         return tf.concat([mean_pred, std_pred, ci_lower, ci_upper], axis=1)
+
+    def raw_predictions(self, inputs):
+        """
+        Returns every ensemble member's own prediction in raw (unscaled) output units, shape
+        (num_models, batch, output_units) -- the per-member counterpart to call()'s already-reduced
+        mean_pred, for callers (e.g. MixedEnsemble) that want to pool individual members together
+        with predictions from other model types rather than just this ensemble's own mean.
+        """
+        inputs = tf.convert_to_tensor(inputs, dtype=self._float_dtype)
+        inputs = self._scale_inputs(inputs)
+
+        s = tf.matmul(tf.expand_dims(inputs, 0), self.w1) + tf.expand_dims(self.b1, 1)
+        feature_mean = tf.expand_dims(self.running_mean, axis=1)
+        feature_std = tf.expand_dims(self.running_std, axis=1)
+        s = (s - feature_mean) / feature_std
+        s = s * tf.constant(-0.5, dtype=self._float_dtype) + tf.constant(-0.5, dtype=self._float_dtype)
+        x = tf.tanh(s)
+
+        h = tf.matmul(x, self.k2) + tf.expand_dims(self.b2, 1)
+        h = tf.nn.softmax(h, axis=-1)
+
+        pred = tf.matmul(h, self.ko)  # (num_models, batch, output_units), scaled
+        return tf.nn.relu(self._unscale_outputs(pred))
 
     def train_step(self, data):
         x, y = data
@@ -187,7 +205,8 @@ class EnsembleELM_Bayesian(tf.keras.Model):
 
     def export_to_onnx(self, output_path=None):
         out = output_path or self.output_path
-        onnx_model, _ = tf2onnx.convert.from_keras(self, opset=self.onnx_opset)
+        input_signature = [tf.TensorSpec([None, self.input_dim], self._float_dtype, name="input")]
+        onnx_model, _ = tf2onnx.convert.from_keras(self, input_signature=input_signature, opset=self.onnx_opset)
         onnx.save_model(onnx_model, out)
         return out
 

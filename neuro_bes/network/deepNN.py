@@ -1,5 +1,7 @@
 import numpy as np
 import tensorflow as tf
+import tf2onnx
+import onnx
 
 def make_MLP(
     data_length,
@@ -152,3 +154,30 @@ def train(model, x, y, epochs=100, batch_size=64, weight_samples=False):
     history = model.fit(train_ds, validation_data=val_ds, epochs=epochs, batch_size=batch_size, callbacks=[model_checkpoint_callback])
     model=tf.keras.models.load_model(checkpoint_filepath)
     return model, history
+
+def export_to_onnx(model, input_shape, output_path="model.onnx", opset=13, dtype="float32"):
+    """
+    Exports a make_MLP/make_CNN Sequential model to ONNX.
+
+    tf2onnx.convert.from_keras (used by EnsembleELM_Bayesian.export_to_onnx and
+    FNO1d.export_to_onnx) fails on plain tf.keras.Sequential models built this way with a
+    KeyError in its output-name lookup, so this wraps the model call in a tf.function and uses
+    tf2onnx.convert.from_function instead, which works around it.
+
+    Args:
+        model (tf.keras.Sequential): A trained make_MLP or make_CNN model.
+        input_shape (tuple): The model's input shape excluding the batch dimension, e.g.
+            (data_length,) for make_MLP or (data_length, 1) for make_CNN.
+        output_path (str): Path to write the ONNX file to.
+        opset (int): ONNX opset version for export.
+        dtype (str): Floating-point precision of the model's input -- 'float32' or 'float64'.
+
+    Returns:
+        str: The output_path the model was written to.
+    """
+    tf_dtype = tf.float32 if dtype == "float32" else tf.float64
+    input_signature = [tf.TensorSpec([None, *input_shape], tf_dtype, name="input")]
+    call_fn = tf.function(lambda x: model(x, training=False), input_signature=input_signature)
+    onnx_model, _ = tf2onnx.convert.from_function(call_fn, input_signature=input_signature, opset=opset)
+    onnx.save_model(onnx_model, output_path)
+    return output_path
