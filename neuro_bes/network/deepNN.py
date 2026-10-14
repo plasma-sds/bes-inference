@@ -1,6 +1,9 @@
 import numpy as np
 import tensorflow as tf
 
+# make_MLP/make_CNN models can be exported via deepNN.export_to_onnx(model, input_shape, ...)
+from neuro_bes.network.onnx_export import export_to_onnx
+
 def make_MLP(
     data_length,
     num_layers=2,

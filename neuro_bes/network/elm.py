@@ -1,7 +1,7 @@
 import numpy as np
 import tensorflow as tf
-import tf2onnx
-import onnx
+
+from neuro_bes.network import onnx_export
 
 _DTYPE_MAP = {
     "float32": tf.float32,
@@ -25,17 +25,17 @@ class EnsembleELM_Bayesian(tf.keras.Model):
         conf_interval_z=1.96,
         alpha=0,
         name="EnsembleELM",
-        onnx_opset=13,
-        output_path="model.onnx",
         dtype="float32",
     ):
-        super().__init__(name=name)
         if isinstance(dtype, str):
             if dtype not in _DTYPE_MAP:
                 raise ValueError(f"dtype must be 'float32' or 'float64', got '{dtype}'")
-            self._float_dtype = _DTYPE_MAP[dtype]
+            float_dtype = _DTYPE_MAP[dtype]
         else:
-            self._float_dtype = dtype
+            float_dtype = dtype
+        # Pass dtype to Keras so it doesn't autocast inputs to float32 before call()
+        super().__init__(name=name, dtype=float_dtype.name)
+        self._float_dtype = float_dtype
         dtype = self._float_dtype
 
         self.input_dim = input_dim
@@ -45,8 +45,6 @@ class EnsembleELM_Bayesian(tf.keras.Model):
         self.num_models = num_models
         self.conf_interval_z = conf_interval_z
         self.alpha = alpha
-        self.onnx_opset = onnx_opset
-        self.output_path = output_path
 
         # Scaling statistics
         self.input_mean = tf.Variable(tf.zeros((input_dim,), dtype=dtype), trainable=False)
@@ -58,9 +56,9 @@ class EnsembleELM_Bayesian(tf.keras.Model):
         np.random.seed(42)
         w1_list, b1_list = [], [] # lists to hold weights and biases for each model in the ensemble
         for _ in range(num_models):
-            tf.keras.utils.set_random_seed(np.random.randint(0))
-            w_init = tf.keras.initializers.RandomUniform(minval=-1.0, maxval=1.0 - 1e-7, seed=np.random.randint(0))
-            b_init = tf.keras.initializers.RandomUniform(minval=-1.0, maxval=1.0 - 1e-7, seed=np.random.randint(0))
+            tf.keras.utils.set_random_seed(np.random.randint(2**31 - 1))
+            w_init = tf.keras.initializers.RandomUniform(minval=-1.0, maxval=1.0 - 1e-7, seed=np.random.randint(2**31 - 1))
+            b_init = tf.keras.initializers.RandomUniform(minval=-1.0, maxval=1.0 - 1e-7, seed=np.random.randint(2**31 - 1))
             w1_list.append(w_init((input_dim, hidden_units_1), dtype=dtype))
             b1_list.append(b_init((hidden_units_1,), dtype=dtype))
 
@@ -72,11 +70,11 @@ class EnsembleELM_Bayesian(tf.keras.Model):
         # Second hidden layer — frozen random projection
         k2_list, b2_list = [], []
         for _ in range(num_models):
-            tf.keras.utils.set_random_seed(np.random.randint(0))
-            k_init = tf.keras.initializers.RandomUniform(minval=-0.75, maxval=0.75, seed=np.random.randint(0))
+            tf.keras.utils.set_random_seed(np.random.randint(2**31 - 1))
+            k_init = tf.keras.initializers.RandomUniform(minval=-0.75, maxval=0.75, seed=np.random.randint(2**31 - 1))
             k2_list.append(k_init((hidden_units_1, hidden_units_2), dtype=dtype))
-            tf.keras.utils.set_random_seed(np.random.randint(0))
-            b_init = tf.keras.initializers.RandomUniform(minval=-1.0, maxval=1.0 - 1e-7, seed=np.random.randint(0))
+            tf.keras.utils.set_random_seed(np.random.randint(2**31 - 1))
+            b_init = tf.keras.initializers.RandomUniform(minval=-1.0, maxval=1.0 - 1e-7, seed=np.random.randint(2**31 - 1))
             b2_list.append(b_init((hidden_units_2,), dtype=dtype))
 
         self.k2 = tf.Variable(tf.stack(k2_list), trainable=False)
@@ -101,7 +99,6 @@ class EnsembleELM_Bayesian(tf.keras.Model):
     def build(self, input_shape):
         input_shape = tf.TensorShape([None, self.input_dim])
         super().build(input_shape)
-        self._set_inputs(tf.keras.Input(shape=(self.input_dim,), dtype=self._float_dtype))
 
     def call(self, inputs):
         inputs = tf.convert_to_tensor(inputs, dtype=self._float_dtype)
@@ -185,11 +182,8 @@ class EnsembleELM_Bayesian(tf.keras.Model):
 
         return {"loss": tf.reduce_mean(tf.square(y - mean_pred))}
 
-    def export_to_onnx(self, output_path=None):
-        out = output_path or self.output_path
-        onnx_model, _ = tf2onnx.convert.from_keras(self, opset=self.onnx_opset)
-        onnx.save_model(onnx_model, out)
-        return out
+    def export_to_onnx(self, output_path="model.onnx", opset=13):
+        return onnx_export.export_to_onnx(self, (self.input_dim,), output_path, opset, self._float_dtype)
 
 
 def make_ensemble_elm(
@@ -199,8 +193,6 @@ def make_ensemble_elm(
     conf_interval_z=1.96,
     alpha=0,
     name="VectorizedEnsembleELM",
-    onnx_opset=13,
-    output_path="model.onnx",
     dtype="float32",
 ):
     """
@@ -213,8 +205,6 @@ def make_ensemble_elm(
         conf_interval_z (float): Z-score for the desired confidence interval. To be calibrated for the specific problem, assuming normal distribution of errors.
         alpha (float): Ridge regression regularization coefficient.
         name (str): Model name.
-        onnx_opset (int): ONNX opset version for export.
-        output_path (str): Default ONNX export path.
         dtype (str): Floating-point precision for all network components — 'float32' or 'float64'.
 
     Returns:
@@ -232,8 +222,6 @@ def make_ensemble_elm(
         conf_interval_z=conf_interval_z,
         alpha=alpha,
         name=name,
-        onnx_opset=onnx_opset,
-        output_path=output_path,
         dtype=dtype,
     )
 
