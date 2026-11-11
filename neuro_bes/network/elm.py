@@ -1,7 +1,6 @@
 import numpy as np
 import tensorflow as tf
 
-from neuro_bes.network import onnx_export
 
 _DTYPE_MAP = {
     "float32": tf.float32,
@@ -182,8 +181,6 @@ class EnsembleELM_Bayesian(tf.keras.Model):
 
         return {"loss": tf.reduce_mean(tf.square(y - mean_pred))}
 
-    def export_to_onnx(self, output_path="model.onnx", opset=13):
-        return onnx_export.export_to_onnx(self, (self.input_dim,), output_path, opset, self._float_dtype)
 
 
 def make_ensemble_elm(
